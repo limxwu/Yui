@@ -21,7 +21,7 @@ def init_deepseek_model():
     
     # 创建模型实例
     model = ChatDeepSeek(
-        model="deepseek-chat",
+        model="deepseek-v4-flash",
         temperature=0.7,  # 可以调整温度参数
     )
     
