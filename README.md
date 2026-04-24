@@ -33,18 +33,15 @@
 
 ### 1. 克隆仓库
 ```bash
-git clone [https://github.com/your-username/project-yui.git](https://github.com/your-username/project-yui.git)
+git clone https://github.com/limxwu/yui.git
 cd project-yui
 ```
 
 ### 2. 环境配置
-创建 `.env` 文件并配置您的环境变量：
+配置的环境变量：
 
 ```env
-OPENAI_API_KEY=your_api_key_here
-# 若使用本地模型
-# OLLAMA_BASE_URL=http://localhost:11434
-# LOG_LEVEL=DEBUG
+DEEPSEEK_API_KEY=your_api_key_here
 ```
 
 ### 3. 安装依赖并运行

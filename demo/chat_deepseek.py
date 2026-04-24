@@ -3,9 +3,9 @@ from typing import List
 from langchain_deepseek import ChatDeepSeek
 import getpass
 import os
-from base import constants
+from core.constants import YUI_SYSTEM_PROMPT
 from langchain_core.messages import BaseMessage
-from langchain.messages import SystemMessage,HumanMessage,AIMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 if not os.getenv("DEEPSEEK_API_KEY"):
     os.environ["DEEPSEEK_API_KEY"] = getpass.getpass(prompt="Enter your DeepSeek API key: ")
@@ -16,7 +16,7 @@ model = ChatDeepSeek(
 
 
 def chat1():
-    system_msg=SystemMessage(content=constants.ROLE_SYSTEM_DEFINE)
+    system_msg=SystemMessage(content=YUI_SYSTEM_PROMPT)
     human_msg1=HumanMessage(content="Yui，我是uu，请称呼我讲个爆笑的笑话，哈哈")
     messages:List[BaseMessage] = [
         system_msg,

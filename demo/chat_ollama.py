@@ -1,5 +1,5 @@
 from langchain_ollama import OllamaLLM
-from base import constants
+from core import constants
 
 model = OllamaLLM(model='qwen3.5:4b')
 
@@ -16,7 +16,7 @@ def chat2():
     messages = [
         (
             "system",
-            constants.ROLE_SYSTEM_DEFINE,
+            constants.YUI_SYSTEM_PROMPT,
         ),
         ("human", "讲个笑话把."),
     ]

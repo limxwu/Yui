@@ -1,7 +1,9 @@
-from base import chat_deepseek
-from base import chat_ollama
+print("=" * 60)
+print("Yui - AI 对话助手")
+print("=" * 60)
+print("\n正在启动 Web 服务器...")
+print("访问地址: http://localhost")
+print("按 Ctrl+C 停止服务器\n")
 
-
-if __name__ == "__main__":
-    print("start")
-    chat_deepseek.chat1()
+from api.app import app
+app.run(debug=True, host='0.0.0.0', port=80)
