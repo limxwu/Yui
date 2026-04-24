@@ -1,24 +1,18 @@
 from typing import List
 
-from langchain_deepseek import ChatDeepSeek
-import getpass
-import os
+from core.llm import get_model
 from core.constants import YUI_SYSTEM_PROMPT
-from langchain_core.messages import BaseMessage
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-
-if not os.getenv("DEEPSEEK_API_KEY"):
-    os.environ["DEEPSEEK_API_KEY"] = getpass.getpass(prompt="Enter your DeepSeek API key: ")
-
-model = ChatDeepSeek(
-    model="deepseek-chat"
-)
+from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage, AIMessage
 
 
 def chat1():
-    system_msg=SystemMessage(content=YUI_SYSTEM_PROMPT)
-    human_msg1=HumanMessage(content="Yui，我是uu，请称呼我讲个爆笑的笑话，哈哈")
-    messages:List[BaseMessage] = [
+    """演示对话功能"""
+    # 获取模型实例
+    model = get_model()
+    
+    system_msg = SystemMessage(content=YUI_SYSTEM_PROMPT)
+    human_msg1 = HumanMessage(content="Yui，我是uu，请称呼我讲个爆笑的笑话，哈哈")
+    messages: List[BaseMessage] = [
         system_msg,
         human_msg1,
     ]

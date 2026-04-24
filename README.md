@@ -18,7 +18,7 @@
 * **AI 框架:** [LangChain](https://github.com/langchain-ai/langchain) / [Semantic Kernel](https://github.com/microsoft/semantic-kernel)
 * **Web 服务:** FastAPI / Flask
 * **异步处理:** asyncio
-* **支持模型:** OpenAI / Anthropic / Local LLMs (via Ollama)
+* **支持模型:** Deepseek / Local LLMs (via Ollama)
 * **环境管理:** Poetry / venv
 
 ## ✨ 核心特性
