@@ -1,4 +1,7 @@
 from base import chat_deepseek
 from base import chat_ollama
 
-chat_deepseek.chat1()
+
+if __name__ == "__main__":
+    print("start")
+    chat_deepseek.chat1()
