@@ -56,9 +56,3 @@ class YuiDoclingTransformer:
             result = converter_ocr.convert(file_path)
         # 直接导出整体 Markdown
         return result.document.export_to_markdown()
-
-
-if __name__ == '__main__':
-    transformer = YuiDoclingTransformer()
-    md = transformer.transform2md('../.doc/hd7279a.pdf')
-    print(md)

@@ -9,7 +9,7 @@ from core.docling_transformer import YuiDoclingTransformer
 pdf_transformer = YuiDoclingTransformer()
 
 # 转换 PDF为markdown格式
-md_text = pdf_transformer.transform2md("../.doc/hd7279a.pdf")
+md_text = pdf_transformer.transform2md("../.doc/safe1_report.docx")
 
 # 创建文本分块器，默认分块大小为 100，分块重叠为 20
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
@@ -26,5 +26,5 @@ chroma = Chroma(embedding_function=embed, persist_directory='./chroma_db', colle
 chroma.add_documents([Document(text) for text in md_text_splitter_chunks])
 
 # 查询数据库
-result = chroma.similarity_search_with_score("复位指令的作用是什么")
+result = chroma.similarity_search_with_score("交叉验证的实验目的是什么")
 print(result)
