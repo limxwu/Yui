@@ -25,11 +25,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 导入路由
-from api.routes.chat import router as chat_router
+# 导入 v1 路由总管理器
+from api.v1 import get_v1_router
 
-# 注册路由
-app.include_router(chat_router, prefix="/chat", tags=["chat"])
+# 注册 v1 版本的所有路由（集中管理）
+app.include_router(get_v1_router(), prefix="/api/v1")
 
 
 @app.get("/")

@@ -13,7 +13,7 @@ st.set_page_config(
 )
 
 # API 基础 URL
-API_BASE_URL = "http://localhost:8000/chat"
+API_BASE_URL = "http://localhost:8000/api/v1"
 
 # 标题
 st.title("🤖 Yui - AI 对话助手")
@@ -29,7 +29,7 @@ def send_message_to_api(message: str) -> str:
     """发送消息到 FastAPI 后端"""
     try:
         response = requests.post(
-            f"{API_BASE_URL}/api/chat",
+            f"{API_BASE_URL}/chat",
             json={
                 "message": message,
                 "session_id": st.session_state.session_id
@@ -53,7 +53,7 @@ def clear_chat():
     """清除聊天历史"""
     try:
         requests.post(
-            f"{API_BASE_URL}/api/clear",
+            f"{API_BASE_URL}/chat/clear",
             json={"session_id": st.session_state.session_id}
         )
     except Exception as e:
