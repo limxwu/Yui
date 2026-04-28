@@ -5,6 +5,11 @@ Streamlit 前端页面 - Yui AI 对话助手
 import streamlit as st
 import requests
 import uuid
+import os
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv()
 
 # 页面配置
 st.set_page_config(
@@ -12,8 +17,8 @@ st.set_page_config(
     page_icon="🤖"
 )
 
-# API 基础 URL
-API_BASE_URL = "http://localhost:8000/api/v1"
+# API 基础 URL（从环境变量读取）
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000/api/v1")
 
 # 标题
 st.title("🤖 Yui - AI 对话助手")
@@ -28,7 +33,7 @@ if 'messages' not in st.session_state:
 def send_message_to_api(message: str) -> str:
     """发送消息到 FastAPI 后端"""
     try:
-        response = requests.post(
+        res = requests.post(
             f"{API_BASE_URL}/chat",
             json={
                 "message": message,
@@ -37,14 +42,14 @@ def send_message_to_api(message: str) -> str:
             timeout=60
         )
 
-        if response.status_code == 200:
-            data = response.json()
+        if res.status_code == 200:
+            data = res.json()
             if data.get('success'):
                 return data.get('response', '')
             else:
                 return f"错误: {data.get('error', '未知错误')}"
         else:
-            return f"请求失败: {response.status_code}"
+            return f"请求失败: {res.status_code}"
     except Exception as e:
         return f"连接错误: {str(e)}"
 
