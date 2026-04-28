@@ -29,6 +29,8 @@ if 'session_id' not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 if 'messages' not in st.session_state:
     st.session_state.messages = []
+if 'use_rag' not in st.session_state:
+    st.session_state.use_rag = True  # 默认启用 RAG
 
 
 def send_message_to_api(message: str) -> str:
@@ -38,7 +40,8 @@ def send_message_to_api(message: str) -> str:
             f"{API_BASE_URL}/chat",
             json={
                 "message": message,
-                "session_id": st.session_state.session_id
+                "session_id": st.session_state.session_id,
+                "use_rag": st.session_state.use_rag
             },
             timeout=60
         )
@@ -68,7 +71,8 @@ def send_message_stream_to_api_sync(message: str):
                 f"{API_BASE_URL}/chat/stream",
                 json={
                     "message": message,
-                    "session_id": st.session_state.session_id
+                    "session_id": st.session_state.session_id,
+                    "use_rag": st.session_state.use_rag
                 }
             ) as event_source:
                 for sse in event_source.iter_sse():
@@ -80,6 +84,30 @@ def send_message_stream_to_api_sync(message: str):
         yield "连接错误: 连接超时，请确保后端服务正在运行"
     except Exception as e:
         yield f"连接错误: {str(e)}"
+
+
+def upload_document_to_api(file) -> dict:
+    """上传文档到 FastAPI 后端"""
+    try:
+        files = {"file": (file.name, file.getvalue(), file.type)}
+        res = requests.post(
+            f"{API_BASE_URL}/memory/document",
+            files=files,
+            timeout=120  # 文档处理可能需要更长时间
+        )
+        
+        if res.status_code == 200:
+            return res.json()
+        else:
+            return {
+                "success": False,
+                "message": f"请求失败: {res.status_code} - {res.text}"
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"连接错误: {str(e)}"
+        }
 
 
 def clear_chat():
@@ -138,9 +166,44 @@ if prompt := st.chat_input("输入消息..."):
         'content': response
     })
 
-# 侧边栏 - 清除对话按钮
+# 侧边栏 - 清除对话按钮和文档上传
 with st.sidebar:
     st.header("设置")
+    
+    # RAG 开关
+    st.subheader("🧠 RAG 设置")
+    use_rag = st.checkbox(
+        "启用知识库检索",
+        value=st.session_state.use_rag,
+        help="启用后，AI 会从已上传的文档中检索相关信息来回答问题"
+    )
+    if use_rag != st.session_state.use_rag:
+        st.session_state.use_rag = use_rag
+        st.rerun()
+    
+    st.divider()
+    
+    # 文档上传区域
+    st.subheader("📄 文档上传")
+    uploaded_file = st.file_uploader(
+        "上传文档到知识库",
+        type=['pdf', 'docx', 'doc', 'txt'],
+        help="支持 PDF、DOCX、DOC、TXT 格式"
+    )
+    
+    if uploaded_file is not None:
+        if st.button("⬆️ 上传文档", use_container_width=True):
+            with st.spinner("正在处理文档..."):
+                result = upload_document_to_api(uploaded_file)
+                
+                if result.get('success'):
+                    st.success(result.get('message', '上传成功'))
+                else:
+                    st.error(result.get('message', '上传失败'))
+    
+    st.divider()
+    
+    # 清除对话按钮
     if st.button("🗑️ 清除对话", use_container_width=True):
         clear_chat()
 

@@ -12,12 +12,14 @@ class ChatRequest(BaseModel):
     """聊天请求模型"""
     message: str = Field(..., min_length=1, description="用户消息内容")
     session_id: Optional[str] = Field("default_session", description="会话 ID")
+    use_rag: bool = Field(True, description="是否使用 RAG（检索增强生成）")
     
     class Config:
         json_schema_extra = {
             "example": {
                 "message": "你好，请介绍一下自己",
-                "session_id": "user_123"
+                "session_id": "user_123",
+                "use_rag": True
             }
         }
 

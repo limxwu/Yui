@@ -1,9 +1,14 @@
 """
 聊天服务层 - 封装聊天相关的业务逻辑
+使用 LangChain LCEL 构建 RAG 链
 """
-from typing import AsyncGenerator
-from core.llm import get_model, aget_model_response, aget_model_stream
+from typing import AsyncGenerator, Optional
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+from core.llm import get_model
 from memory.session_manager import session_manager
+from memory.persistent_memory import persistent_memory
 from utils.exceptions import EmptyMessageError, LLMCallError
 from utils.logger import logger
 
@@ -13,6 +18,8 @@ class ChatService:
     
     def __init__(self):
         self._model = None
+        self._rag_chain = None
+        self._stream_rag_chain = None
     
     def _get_model_instance(self):
         """获取模型实例（懒加载）"""
@@ -20,13 +27,159 @@ class ChatService:
             self._model = get_model()
         return self._model
     
-    async def send_message(self, message: str, session_id: str = "default_session") -> str:
+    def _build_rag_prompt(self) -> ChatPromptTemplate:
+        """
+        构建 RAG 提示模板
+        
+        Returns:
+            ChatPromptTemplate: RAG 提示模板
+        """
+        template = """你是一个智能助手 Yui，基于提供的上下文信息回答问题。
+
+**上下文信息：**
+{context}
+
+**历史对话：**
+{history}
+
+**当前问题：**
+{question}
+
+请根据上下文信息和历史对话，准确、简洁地回答用户的问题。如果上下文中没有相关信息，请诚实地告诉用户你不知道，不要编造答案。
+
+回答："""
+        
+        return ChatPromptTemplate.from_template(template)
+    
+    def _build_normal_prompt(self) -> ChatPromptTemplate:
+        """
+        构建普通对话提示模板（无 RAG）
+        
+        Returns:
+            ChatPromptTemplate: 普通对话提示模板
+        """
+        from core.constants import YUI_SYSTEM_PROMPT
+        
+        messages = [
+            ("system", YUI_SYSTEM_PROMPT),
+            ("placeholder", "{history}"),
+            ("human", "{question}"),
+        ]
+        
+        return ChatPromptTemplate.from_messages(messages)
+    
+    def _create_rag_chain(self, use_stream: bool = False):
+        """
+        创建 RAG 链（使用 LCEL）
+        
+        Args:
+            use_stream: 是否创建流式链
+            
+        Returns:
+            可运行的链对象
+        """
+        model = self._get_model_instance()
+        prompt = self._build_rag_prompt()
+        
+        # 定义检索函数
+        def retrieve_documents(query: dict) -> dict:
+            """检索相关文档"""
+            question = query.get("question", "")
+            if not question:
+                return {"context": "", **query}
+            
+            try:
+                # 从向量数据库检索相关文档
+                docs_with_scores = persistent_memory.similarity_search_with_score(question)
+                
+                # 提取文档内容并拼接
+                if docs_with_scores:
+                    # 只取前 3 个最相关的文档
+                    context_docs = [doc.page_content for doc, score in docs_with_scores[:3]]
+                    context = "\n\n".join(context_docs)
+                else:
+                    context = "未找到相关文档"
+                    
+                logger.debug(f"检索到 {len(docs_with_scores)} 个相关文档")
+            except Exception as e:
+                logger.warning(f"文档检索失败: {str(e)}")
+                context = "文档检索失败"
+            
+            return {"context": context, **query}
+        
+        # 使用 LCEL 构建链
+        chain = (
+            {
+                "context": retrieve_documents,
+                "history": lambda x: x.get("history", ""),
+                "question": lambda x: x.get("question", "")
+            }
+            | prompt
+            | model
+            | StrOutputParser()
+        )
+        
+        return chain
+    
+    def _create_normal_chain(self, use_stream: bool = False):
+        """
+        创建普通对话链（无 RAG，使用 LCEL）
+        
+        Args:
+            use_stream: 是否创建流式链
+            
+        Returns:
+            可运行的链对象
+        """
+        model = self._get_model_instance()
+        prompt = self._build_normal_prompt()
+        
+        # 使用 LCEL 构建链
+        chain = (
+            {
+                "history": lambda x: x.get("history", []),
+                "question": lambda x: x.get("question", "")
+            }
+            | prompt
+            | model
+            | StrOutputParser()
+        )
+        
+        return chain
+    
+    def _format_history(self, messages: list) -> str:
+        """
+        格式化历史对话为字符串
+        
+        Args:
+            messages: 消息列表
+            
+        Returns:
+            格式化后的历史对话字符串
+        """
+        formatted = []
+        for msg in messages:
+            role = msg.get('role', '')
+            content = msg.get('content', '')
+            if role == 'user':
+                formatted.append(f"用户: {content}")
+            elif role == 'assistant':
+                formatted.append(f"AI: {content}")
+        return "\n".join(formatted)
+    
+    async def send_message(
+        self, 
+        message: str, 
+        session_id: str = "default_session",
+        use_rag: bool = True
+    ) -> str:
         """
         发送消息并获取 AI 回复
         
         Args:
             message: 用户消息
             session_id: 会话 ID
+            use_rag: 是否使用 RAG（检索增强生成）
             
         Returns:
             str: AI 的回复内容
@@ -41,7 +194,7 @@ class ChatService:
             logger.warning(f"收到空消息，session_id={session_id}")
             raise EmptyMessageError()
         
-        logger.info(f"处理聊天请求，session_id={session_id}, message_length={len(user_message)}")
+        logger.info(f"处理聊天请求，session_id={session_id}, use_rag={use_rag}, message_length={len(user_message)}")
         
         try:
             # 获取或创建会话
@@ -50,22 +203,35 @@ class ChatService:
             # 添加用户消息到会话
             conversation.add_user_message(user_message)
             
-            # 转换为 LangChain 格式
-            messages = conversation.to_langchain_messages()
+            # 获取历史对话
+            history_messages = conversation.get_messages()[:-1]  # 排除刚添加的用户消息
+            history_str = self._format_history(history_messages)
             
-            # 调用 LLM 获取回复
-            model_instance = self._get_model_instance()
-            response = await aget_model_response(model_instance, messages)
+            # 选择链类型
+            if use_rag:
+                chain = self._create_rag_chain()
+                input_data = {
+                    "question": user_message,
+                    "history": history_str
+                }
+            else:
+                chain = self._create_normal_chain()
+                # 转换为 LangChain 消息格式
+                lc_messages = conversation.to_langchain_messages()
+                input_data = {
+                    "question": user_message,
+                    "history": lc_messages
+                }
             
-            # 提取 AI 回复内容
-            ai_response = response.content if hasattr(response, 'content') else str(response)
+            # 调用链获取回复
+            response = await chain.ainvoke(input_data)
             
             # 添加 AI 回复到会话
-            conversation.add_ai_message(ai_response)
+            conversation.add_ai_message(response)
             
-            logger.info(f"聊天请求处理成功，session_id={session_id}, response_length={len(ai_response)}")
+            logger.info(f"聊天请求处理成功，session_id={session_id}, response_length={len(response)}")
             
-            return ai_response
+            return response
             
         except EmptyMessageError:
             raise
@@ -76,7 +242,8 @@ class ChatService:
     async def send_message_stream(
         self, 
         message: str, 
-        session_id: str = "default_session"
+        session_id: str = "default_session",
+        use_rag: bool = True
     ) -> AsyncGenerator[str, None]:
         """
         发送消息并获取流式 AI 回复
@@ -84,9 +251,10 @@ class ChatService:
         Args:
             message: 用户消息
             session_id: 会话 ID
+            use_rag: 是否使用 RAG（检索增强生成）
             
         Yields:
-            str: SSE 格式的 AI 回复片段
+            str: AI 回复片段
             
         Raises:
             EmptyMessageError: 当消息为空时
@@ -98,8 +266,9 @@ class ChatService:
             logger.warning(f"收到空消息，session_id={session_id}")
             raise EmptyMessageError()
         
-        logger.info(f"处理流式聊天请求，session_id={session_id}, message_length={len(user_message)}")
+        logger.info(f"处理流式聊天请求，session_id={session_id}, use_rag={use_rag}, message_length={len(user_message)}")
         
+        full_response = ""
         try:
             # 获取或创建会话
             conversation = session_manager.get_or_create_session(session_id)
@@ -107,16 +276,28 @@ class ChatService:
             # 添加用户消息到会话
             conversation.add_user_message(user_message)
             
-            # 转换为 LangChain 格式
-            messages = conversation.to_langchain_messages()
+            # 获取历史对话
+            history_messages = conversation.get_messages()[:-1]  # 排除刚添加的用户消息
+            history_str = self._format_history(history_messages)
             
-            # 调用 LLM 获取流式回复
-            model_instance = self._get_model_instance()
-            full_response = ""
+            # 选择链类型
+            if use_rag:
+                chain = self._create_rag_chain()
+                input_data = {
+                    "question": user_message,
+                    "history": history_str
+                }
+            else:
+                chain = self._create_normal_chain()
+                lc_messages = conversation.to_langchain_messages()
+                input_data = {
+                    "question": user_message,
+                    "history": lc_messages
+                }
             
-            async for chunk in aget_model_stream(model_instance, messages):
+            # 流式调用链
+            async for chunk in chain.astream(input_data):
                 full_response += chunk
-                # 按照 SSE 协议格式返回数据
                 yield chunk
             
             # 添加完整的 AI 回复到会话

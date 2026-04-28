@@ -1,7 +1,11 @@
 import re
+
+from typing import Union
+from pathlib import Path
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.datamodel.base_models import InputFormat
+from docling_core.types.io import DocumentStream
 
 
 class DoclingTransformer:
@@ -40,15 +44,15 @@ class DoclingTransformer:
 
         return quality_score > threshold
 
-    def transform2md(self, file_path: str) -> str:
+    def transform2md(self, source: Union[Path, str, DocumentStream]) -> str:
 
-        result = self.converter_fast.convert(file_path)
+        result = self.converter_fast.convert(source)
         sample_text = result.document.export_to_markdown()[:2000]  # 只检测前2000字提升效率
 
         # 阶段 2：质量判定
         if self._is_low_quality_text(sample_text):
-            print(f"检测到编码损坏，正在切换到 OCR 模式解析: {file_path}")
-            result = self.converter_ocr.convert(file_path)
+            print(f"检测到编码损坏，正在切换到 OCR 模式解析")
+            result = self.converter_ocr.convert(source)
         # 直接导出整体 Markdown
         return result.document.export_to_markdown()
 

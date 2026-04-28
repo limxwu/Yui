@@ -28,12 +28,13 @@ async def chat(chat_request: ChatRequest):
     职责：参数验证、调用服务层、异常处理、返回响应
     """
     try:
-        logger.debug(f"收到聊天请求，session_id={chat_request.session_id}")
+        logger.debug(f"收到聊天请求，session_id={chat_request.session_id}, use_rag={chat_request.use_rag}")
 
         # 调用服务层处理业务逻辑
         ai_response = await chat_service.send_message(
             message=chat_request.message,
-            session_id=chat_request.session_id or 'default_session'
+            session_id=chat_request.session_id or 'default_session',
+            use_rag=chat_request.use_rag
         )
 
         return ChatResponse(
@@ -65,13 +66,14 @@ async def chat_stream(chat_request: ChatRequest):
     职责：参数验证、调用服务层、异常处理、返回SSE流式响应
     """
     try:
-        logger.debug(f"收到流式聊天请求，session_id={chat_request.session_id}")
+        logger.debug(f"收到流式聊天请求，session_id={chat_request.session_id}, use_rag={chat_request.use_rag}")
 
         # 调用服务层处理业务逻辑并返回生成器
         async def generate():
             async for chunk in chat_service.send_message_stream(
                     message=chat_request.message,
-                    session_id=chat_request.session_id or 'default_session'
+                    session_id=chat_request.session_id or 'default_session',
+                    use_rag=chat_request.use_rag
             ):
                 # SSE格式要求：data字段中的换行符需要特殊处理
                 # 每个chunk作为单独的SSE事件发送

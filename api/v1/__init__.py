@@ -3,6 +3,7 @@
 """
 from fastapi import APIRouter
 from api.v1.chat import chat_router
+from api.v1.memory import memory_router
 
 
 def get_v1_router() -> APIRouter:
@@ -17,5 +18,6 @@ def get_v1_router() -> APIRouter:
     
     # 注册所有 v1 子路由模块到总路由器中，并设置各自的前缀和标签
     v1_router.include_router(chat_router, prefix="/chat",tags=["Chat"])
+    v1_router.include_router(memory_router, prefix="/memory", tags=["Memory"])
     
     return v1_router
