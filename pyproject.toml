@@ -19,6 +19,8 @@ dependencies = [
     "streamlit>=1.40.0",
     "pillow>=11.0.0",
     "requests>=2.33.1",
+    "httpx>=0.28.1",
+    "httpx-sse>=0.4.3",
 ]
 
 [build-system]

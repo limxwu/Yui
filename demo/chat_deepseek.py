@@ -20,5 +20,7 @@ def chat1():
     print(ai_msg1.content)
     messages.append(ai_msg1)
     messages.append(HumanMessage(content="谢谢"))
-    ai_msg2 = model.invoke(messages)
-    print(ai_msg2.content)
+    for chunk in  model.stream(messages):
+        print(chunk.content,end="",flush=True)
+
+chat1()

@@ -7,6 +7,7 @@ import requests
 import uuid
 import os
 from dotenv import load_dotenv
+import json
 
 # 加载环境变量
 load_dotenv()
@@ -31,7 +32,7 @@ if 'messages' not in st.session_state:
 
 
 def send_message_to_api(message: str) -> str:
-    """发送消息到 FastAPI 后端"""
+    """发送消息到 FastAPI 后端（非流式）"""
     try:
         res = requests.post(
             f"{API_BASE_URL}/chat",
@@ -52,6 +53,33 @@ def send_message_to_api(message: str) -> str:
             return f"请求失败: {res.status_code}"
     except Exception as e:
         return f"连接错误: {str(e)}"
+
+
+def send_message_stream_to_api_sync(message: str):
+    """发送消息到 FastAPI 后端并接收流式响应（同步版本）"""
+    try:
+        import httpx
+        from httpx_sse import connect_sse
+        
+        with httpx.Client() as client:
+            with connect_sse(
+                client,
+                "POST",
+                f"{API_BASE_URL}/chat/stream",
+                json={
+                    "message": message,
+                    "session_id": st.session_state.session_id
+                }
+            ) as event_source:
+                for sse in event_source.iter_sse():
+                    chunk = json.loads(sse.data)['v']
+                    yield chunk
+    except httpx.ReadTimeout:
+        yield "连接错误: 读取超时，请检查网络连接或稍后重试"
+    except httpx.ConnectTimeout:
+        yield "连接错误: 连接超时，请确保后端服务正在运行"
+    except Exception as e:
+        yield f"连接错误: {str(e)}"
 
 
 def clear_chat():
@@ -87,11 +115,22 @@ if prompt := st.chat_input("输入消息..."):
         'content': prompt
     })
 
-    # 调用 API 获取回复
+    # 调用 API 获取回复（使用流式响应）
     with st.chat_message("assistant"):
-        with st.spinner('Yui 正在思考...'):
-            response = send_message_to_api(prompt)
-        st.markdown(response)
+        message_placeholder = st.empty()
+        full_response = ""
+        
+        # 使用同步流式请求
+        for chunk in send_message_stream_to_api_sync(prompt):
+            full_response += chunk
+            # Streamlit markdown渲染：保持原始内容不变
+            # Markdown规范中，段落间的空行（双换行）会自动识别
+            # 单个换行需要两个空格才能生效，但我们不修改原始数据
+            message_placeholder.markdown(full_response + "▌")
+        
+        # 最终显示完整响应，移除光标
+        message_placeholder.markdown(full_response)
+        response = full_response
 
     # 添加 AI 回复到历史
     st.session_state.messages.append({

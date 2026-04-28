@@ -72,3 +72,47 @@ async def aget_model_response(model, messages):
     except Exception as e:
         # 如果异步调用失败，回退到同步调用
         return model.invoke(messages)
+
+
+async def aget_model_stream(model, messages):
+    """
+    异步获取模型流式响应
+    
+    Args:
+        model: LLM 模型实例
+        messages: 消息列表
+        
+    Yields:
+        str: 模型响应的每个片段
+    """
+    try:
+        # 检查模型是否支持流式调用
+        if hasattr(model, 'astream'):
+            async for chunk in model.astream(messages):
+                # 从chunk中提取文本内容
+                if hasattr(chunk, 'content'):
+                    yield chunk.content
+                else:
+                    yield str(chunk)
+        elif hasattr(model, 'stream'):
+            # 如果不支持异步流式，使用同步流式但在异步上下文中
+            import asyncio
+            loop = asyncio.get_event_loop()
+            
+            def sync_stream():
+                for chunk in model.stream(messages):
+                    if hasattr(chunk, 'content'):
+                        yield chunk.content
+                    else:
+                        yield str(chunk)
+            
+            for chunk in sync_stream():
+                yield chunk
+        else:
+            # 如果都不支持，回退到普通调用
+            response = await aget_model_response(model, messages)
+            yield response.content if hasattr(response, 'content') else str(response)
+    except Exception as e:
+        # 如果流式调用失败，回退到普通调用
+        response = await aget_model_response(model, messages)
+        yield response.content if hasattr(response, 'content') else str(response)
