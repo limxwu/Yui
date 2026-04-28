@@ -69,6 +69,10 @@ instance/
 # Flask session storage
 flask_session/
 
+# Chroma DB data
+data/
+*.chroma
+
 # Scrapy stuff:
 .scrapy
 
@@ -127,6 +131,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
 .venv
 env/
 venv/

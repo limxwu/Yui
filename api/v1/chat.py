@@ -4,30 +4,19 @@
 """
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from typing import Optional
 
 # 导入服务层（业务逻辑）
 from services.chat_service import chat_service
 
+# 导入数据模型
+from models.schemas import ChatRequest, ClearRequest, ChatResponse
+
+# 导入自定义异常
+from utils.exceptions import EmptyMessageError, LLMCallError
+from utils.logger import logger
+
 # 创建路由器（接口层）
 chat_router = APIRouter()
-
-
-# 请求模型
-class ChatRequest(BaseModel):
-    message: str
-    session_id: Optional[str] = "default_session"
-
-
-class ClearRequest(BaseModel):
-    session_id: Optional[str] = "default_session"
-
-
-class ChatResponse(BaseModel):
-    success: bool
-    response: Optional[str] = None
-    error: Optional[str] = None
 
 
 @chat_router.post('', response_model=ChatResponse)
@@ -37,6 +26,8 @@ async def chat(chat_request: ChatRequest):
     职责：参数验证、调用服务层、异常处理、返回响应
     """
     try:
+        logger.debug(f"收到聊天请求，session_id={chat_request.session_id}")
+        
         # 调用服务层处理业务逻辑
         ai_response = await chat_service.send_message(
             message=chat_request.message,
@@ -48,17 +39,21 @@ async def chat(chat_request: ChatRequest):
             response=ai_response
         )
     
-    except ValueError as e:
+    except EmptyMessageError as e:
         # 业务验证异常 -> 400
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning(f"空消息错误: {e.message}")
+        raise HTTPException(status_code=400, detail=e.message)
+    except LLMCallError as e:
+        # LLM 调用失败 -> 500
+        logger.error(f"LLM 调用错误: {e.message}")
+        raise HTTPException(status_code=500, detail=e.message)
     except HTTPException:
         # FastAPI HTTP 异常直接抛出
         raise
     except Exception as e:
-        # 其他异常 -> 500
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        # 其他未预期异常 -> 500
+        logger.error(f"未预期的错误: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
 
 
 @chat_router.post('/clear')
