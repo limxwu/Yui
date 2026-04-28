@@ -3,13 +3,10 @@ from langchain_core.documents import Document
 from langchain_ollama import OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from core.docling_transformer import YuiDoclingTransformer
-
-# 创建 PDF 转换器
-pdf_transformer = YuiDoclingTransformer()
+from core.docling_transformer import docling_transformer
 
 # 转换 PDF为markdown格式
-md_text = pdf_transformer.transform2md(".doc/safe1_report.docx")
+md_text = docling_transformer.transform2md(".doc/safe1_report.docx")
 
 # 创建文本分块器，默认分块大小为 100，分块重叠为 20
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)

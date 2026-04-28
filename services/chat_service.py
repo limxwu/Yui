@@ -1,12 +1,10 @@
 """
 聊天服务层 - 封装聊天相关的业务逻辑
 """
-from typing import Optional
 from core.llm import get_model, aget_model_response
-from core.config import settings
 from memory.session_manager import session_manager
-from utils.logger import logger
 from utils.exceptions import EmptyMessageError, LLMCallError
+from utils.logger import logger
 
 
 class ChatService:
