@@ -2,13 +2,14 @@
 聊天服务层 - 封装聊天相关的业务逻辑
 使用 LangChain LCEL 构建 RAG 链
 """
-from typing import AsyncGenerator, Optional
-from langchain_core.prompts import ChatPromptTemplate
+from typing import AsyncGenerator
+
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.prompts import ChatPromptTemplate
+
 from core.llm import get_model
-from memory.session_manager import session_manager
 from memory.persistent_memory import persistent_memory
+from memory.session_manager import session_manager
 from utils.exceptions import EmptyMessageError, LLMCallError
 from utils.logger import logger
 
@@ -34,22 +35,16 @@ class ChatService:
         Returns:
             ChatPromptTemplate: RAG 提示模板
         """
-        template = """你是一个智能助手 Yui，基于提供的上下文信息回答问题。
-
-**上下文信息：**
-{context}
-
-**历史对话：**
-{history}
-
-**当前问题：**
-{question}
-
-请根据上下文信息和历史对话，准确、简洁地回答用户的问题。如果上下文中没有相关信息，请诚实地告诉用户你不知道，不要编造答案。
-
-回答："""
+        from core.constants import YUI_SYSTEM_PROMPT
         
-        return ChatPromptTemplate.from_template(template)
+        messages = [
+            ("system", YUI_SYSTEM_PROMPT),
+            ("system", "以下是参考上下文：\n{context}"),
+            ("placeholder", "{history}"),
+            ("human", "{question}"),
+        ]
+        
+        return ChatPromptTemplate.from_messages(messages)
     
     def _build_normal_prompt(self) -> ChatPromptTemplate:
         """
@@ -111,7 +106,7 @@ class ChatService:
         chain = (
             {
                 "context": retrieve_documents,
-                "history": lambda x: x.get("history", ""),
+                "history": lambda x: x.get("history", []),
                 "question": lambda x: x.get("question", "")
             }
             | prompt
@@ -203,21 +198,18 @@ class ChatService:
             # 添加用户消息到会话
             conversation.add_user_message(user_message)
             
-            # 获取历史对话
-            history_messages = conversation.get_messages()[:-1]  # 排除刚添加的用户消息
-            history_str = self._format_history(history_messages)
+            # 转换为 LangChain 消息格式
+            lc_messages = conversation.to_langchain_messages()
             
             # 选择链类型
             if use_rag:
                 chain = self._create_rag_chain()
                 input_data = {
                     "question": user_message,
-                    "history": history_str
+                    "history": lc_messages
                 }
             else:
                 chain = self._create_normal_chain()
-                # 转换为 LangChain 消息格式
-                lc_messages = conversation.to_langchain_messages()
                 input_data = {
                     "question": user_message,
                     "history": lc_messages
@@ -276,20 +268,18 @@ class ChatService:
             # 添加用户消息到会话
             conversation.add_user_message(user_message)
             
-            # 获取历史对话
-            history_messages = conversation.get_messages()[:-1]  # 排除刚添加的用户消息
-            history_str = self._format_history(history_messages)
+            # 转换为 LangChain 消息格式
+            lc_messages = conversation.to_langchain_messages()
             
             # 选择链类型
             if use_rag:
                 chain = self._create_rag_chain()
                 input_data = {
                     "question": user_message,
-                    "history": history_str
+                    "history": lc_messages
                 }
             else:
                 chain = self._create_normal_chain()
-                lc_messages = conversation.to_langchain_messages()
                 input_data = {
                     "question": user_message,
                     "history": lc_messages

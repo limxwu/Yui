@@ -80,7 +80,7 @@ async def chat_stream(chat_request: ChatRequest):
                 if chunk:
                     # SSE协议中，data字段的值如果包含换行，需要用\n分隔多个data行
                     # 但这里我们希望保持chunk的完整性，所以直接发送
-                    payload = json.dumps({"v": chunk})
+                    payload = json.dumps({"v": chunk}, ensure_ascii=False)
                     yield f"data: {payload}\n\n"
 
 

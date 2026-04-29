@@ -27,7 +27,7 @@
 ### 核心框架
 * **Python:** 3.14+
 * **Web 框架:** [FastAPI](https://fastapi.tiangolo.com/) - 高性能异步 Web 框架
-* **前端界面:** [Streamlit](https://streamlit.io/) - 快速构建数据应用
+* **前端界面:** Vue 3 + Vite + TypeScript + Tailwind CSS
 * **AI 框架:** [LangChain](https://github.com/langchain-ai/langchain) - LLM 应用开发框架
 
 ### AI 模型支持
@@ -107,9 +107,6 @@ DEEPSEEK_API_KEY=sk-your_api_key_here
 API_HOST=0.0.0.0
 API_PORT=8000
 
-# Streamlit 前端配置
-STREAMLIT_PORT=8501
-
 # 日志配置
 LOG_LEVEL=INFO
 # LOG_FILE=./logs/yui.log  # 可选：输出到文件
@@ -127,33 +124,51 @@ pip install -r requirements.txt
 
 ### 4. 启动服务
 
-#### 方式一：同时启动前后端（推荐）
+#### 方式一：启动后端服务
 
 ```bash
 python main.py
 ```
 
-这将同时启动：
-- FastAPI 后端: http://localhost:8000
-- Streamlit 前端: http://localhost:8501
-
-#### 方式二：单独启动后端
+或者：
 
 ```bash
 uvicorn api.app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-#### 方式三：单独启动前端
+这将启动 FastAPI 后端: http://localhost:8000
+
+#### 方式二：启动前端服务（新终端）
 
 ```bash
-streamlit run web/app.py --server.port 8501
+cd web
+npm run dev
 ```
+
+这将启动 Vue 3 前端: http://localhost:5173
 
 ### 5. 访问应用
 
 - 📖 **API 文档**: http://localhost:8000/docs （Swagger UI）
-- 🎨 **前端界面**: http://localhost:8501 （Streamlit）
+- 🎨 **前端界面**: http://localhost:5173 （Vue 3 SPA）
 - 💚 **健康检查**: http://localhost:8000/health
+
+### 6. 前端环境配置
+
+如果需要修改前端调用后端 API 的地址，可以在 `web/` 目录下创建 `.env` 文件：
+
+```bash
+cd web
+cp .env.example .env
+```
+
+然后编辑 `.env` 文件，修改 `VITE_API_BASE_URL` 变量：
+
+```env
+VITE_API_BASE_URL=http://your-api-server:8000/api/v1
+```
+
+重启前端服务使配置生效。
 
 ---
 
@@ -191,9 +206,17 @@ Yui/
 │   ├── logger.py           # 日志配置
 │   └── exceptions.py       # 自定义异常类
 │
-├── web/                    # 【前端层】Streamlit 前端
-│   ├── __init__.py
-│   └── app.py              # Streamlit 主应用
+├── web/                    # 【前端层】Vue 3 SPA
+│   ├── src/                # 源代码
+│   │   ├── api/            # API 调用封装
+│   │   ├── components/     # Vue 组件
+│   │   ├── composables/    # Composition API
+│   │   ├── types/          # TypeScript 类型定义
+│   │   └── App.vue         # 根组件
+│   ├── .env                # 环境变量（不提交）
+│   ├── .env.example        # 环境变量模板
+│   ├── package.json        # Node.js 依赖
+│   └── vite.config.ts      # Vite 配置
 │
 ├── tests/                  # 【测试层】单元测试和集成测试
 ├── docs/                   # 【文档层】项目文档
@@ -212,7 +235,7 @@ Yui/
 | **基础设施层** | `core/` | LLM 客户端、配置管理、工具类 |
 | **数据访问层** | `memory/` | 会话管理、数据持久化 |
 | **工具层** | `utils/` | 日志、异常等通用工具 |
-| **前端层** | `web/` | Streamlit 用户界面 |
+| **前端层** | `web/` | Vue 3 SPA 用户界面 |
 
 ---
 
@@ -347,8 +370,10 @@ flake8
 
 - [LangChain](https://github.com/langchain-ai/langchain) - LLM 应用开发框架
 - [FastAPI](https://fastapi.tiangolo.com/) - 高性能 Web 框架
-- [Streamlit](https://streamlit.io/) - 快速数据应用构建
 - [DeepSeek](https://deepseek.com/) - 强大的语言模型
+- [Vue 3](https://vuejs.org/) - 渐进式 JavaScript 框架
+- [Vite](https://vitejs.dev/) - 下一代前端构建工具
+- [Tailwind CSS](https://tailwindcss.com/) - 实用优先的 CSS 框架
 
 ---
 

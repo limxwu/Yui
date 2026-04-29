@@ -15,14 +15,7 @@ dependencies = [
     "langchain-community>=0.4.1",
     # FastAPI 后端依赖
     "fastapi[standard]==0.136.1",
-    # Streamlit 前端依赖
-    "streamlit>=1.40.0",
-    "pillow>=11.0.0",
     "requests>=2.33.1",
-    "httpx>=0.28.1",
-    "httpx-sse>=0.4.3",
-    "path>=17.1.1",
-    "document>=1.0",
     "docling-core>=2.74.1",
 ]
 
@@ -31,7 +24,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["api", "core", "services", "models", "utils", "memory", "web", "agents"]
+packages = ["api", "core", "services", "models", "utils", "memory", "agents"]
 
 [[tool.uv.index]]
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
