@@ -17,6 +17,7 @@ dependencies = [
     "fastapi[standard]==0.136.1",
     "requests>=2.33.1",
     "docling-core>=2.74.1",
+    "uvicorn>=0.30.6",
 ]
 
 [build-system]

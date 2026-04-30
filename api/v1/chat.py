@@ -20,6 +20,20 @@ import json
 # 创建路由器（接口层）
 chat_router = APIRouter()
 
+def list_sessions():
+    """
+    列出所有会话（接口层）
+    职责：调用服务层、返回响应
+    """
+    return chat_service.list_sessions()
+
+def chat_history(session_id: str):
+    """
+    列出会话历史（接口层）
+    职责：调用服务层、返回响应
+    """
+    return chat_service.list_chat_history(session_id)
+
 
 @chat_router.post('', response_model=ChatResponse)
 async def chat(chat_request: ChatRequest):

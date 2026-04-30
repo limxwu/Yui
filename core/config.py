@@ -33,10 +33,6 @@ class Settings:
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2")
     
-    # ==================== Streamlit 前端配置 ====================
-    STREAMLIT_HOST: str = os.getenv("STREAMLIT_HOST", "localhost")
-    STREAMLIT_PORT: int = int(os.getenv("STREAMLIT_PORT", 8501))
-    
     # ==================== 会话管理配置 ====================
     SESSION_TIMEOUT: int = int(os.getenv("SESSION_TIMEOUT", 3600))  # 秒
     DEFAULT_SESSION_ID: str = "default_session"
