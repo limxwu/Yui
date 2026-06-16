@@ -171,4 +171,7 @@ cython_debug/
 #.idea/
 
 .idea
-!/.env
+
+chroma_db
+uv.lock
+
